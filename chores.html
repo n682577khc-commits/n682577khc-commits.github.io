@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Squad Chores ✨</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root {
             --bg-color: #f8f9fa;
@@ -28,11 +29,17 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 20px;
+            /* Padding on body for scrolling, but we won't snap this anymore */
             padding-top: max(20px, env(safe-area-inset-top));
             padding-bottom: 400px;
             -webkit-font-smoothing: antialiased;
             overscroll-behavior-y: none; 
+        }
+
+        /* Container for snapping cleaner pics */
+        #capture-container {
+            padding: 20px;
+            background-color: var(--bg-color); /* Ensure bg color in snap */
         }
 
         /* --- HEADER --- */
@@ -43,7 +50,6 @@
             margin-bottom: 30px;
         }
 
-        /* BRAT STYLE TITLE */
         h1 { 
             font-family: "Arial Narrow", "Helvetica Condensed", sans-serif;
             font-weight: 700; 
@@ -305,18 +311,19 @@
     </style>
 </head>
 <body>
+    
+    <div id="capture-container">
+        <header>
+            <h1>the rota</h1>
+            <div class="header-tools">
+                <button class="tool-btn" onclick="weeklyReset()" data-tooltip="Weekly Reset ✨">🔄</button>
+                <button class="tool-btn" onclick="chaosMode()" data-tooltip="Shuffle 🎲">🎲</button>
+                <button class="tool-btn" onclick="snapSchedule()" data-tooltip="Snap Pic 📸">📸</button>
+            </div>
+        </header>
 
-    <header>
-        <h1>the rota</h1>
-        <div class="header-tools">
-            <button class="tool-btn" onclick="exportToReminders()" data-tooltip="Export 🍏">🍏</button>
-            <button class="tool-btn" onclick="weeklyReset()" data-tooltip="Weekly Reset ✨">🔄</button>
-            <button class="tool-btn" onclick="chaosMode()" data-tooltip="Shuffle 🎲">🎲</button>
-            <button class="tool-btn" onclick="snapSchedule()" data-tooltip="Snap Pic 📸">📸</button>
-        </div>
-    </header>
-
-    <div class="schedule" id="scheduleGrid"></div>
+        <div class="schedule" id="scheduleGrid"></div>
+    </div>
 
     <div id="snapModal">
         <button class="close-modal" onclick="closeSnap()">×</button>
@@ -356,6 +363,10 @@
             const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
             const squad = ["stevie", "lucy", "noah", "daisy", "ella"];
             const sassyEmpty = ["Go touch grass.", "Empty like my bank account.", "Zero vibes detected.", "Living rent free."];
+            const colorMap = {
+                'stevie': '#ff6b6b', 'lucy': '#e056fd', 'noah': '#00cec9',
+                'daisy': '#f9ca24', 'ella': '#4834d4'
+            };
 
             let choreData = {};
             try {
@@ -393,9 +404,10 @@
                         choresHtml = choreData[day].map((chore, index) => {
                             const isDone = chore.done ? 'done' : '';
                             const isChecked = chore.done ? 'checked' : '';
+                            // Pass event to toggleDone for particle origin
                             return `
                             <div class="chore-item person-${chore.person} ${isDone}">
-                                <div class="chore-left" onclick="toggleDone('${day}', ${index})">
+                                <div class="chore-left" onclick="toggleDone('${day}', ${index}, event)">
                                     <input type="checkbox" class="chore-checkbox" ${isChecked} style="accent-color: var(--${chore.person})">
                                     <span><strong>${chore.person.charAt(0).toUpperCase() + chore.person.slice(1)}:</strong> ${chore.text}</span>
                                 </div>
@@ -458,8 +470,30 @@
                 }
             }
 
-            window.toggleDone = function(day, index) {
-                choreData[day][index].done = !choreData[day][index].done;
+            window.toggleDone = function(day, index, event) {
+                const newStatus = !choreData[day][index].done;
+                choreData[day][index].done = newStatus;
+                
+                // Trigger Confetti if marking done
+                if (newStatus === true && event) {
+                    const person = choreData[day][index].person;
+                    const color = colorMap[person] || '#ffffff';
+                    
+                    // Get click coordinates relative to viewport
+                    const x = event.clientX / window.innerWidth;
+                    const y = event.clientY / window.innerHeight;
+
+                    confetti({
+                        origin: { x: x, y: y },
+                        particleCount: 40,
+                        spread: 70,
+                        colors: [color, '#ffffff'],
+                        ticks: 200,
+                        gravity: 1.2,
+                        scalar: 0.8,
+                        disableForReducedMotion: true
+                    });
+                }
                 saveAndRender();
             }
 
@@ -512,31 +546,6 @@
                 saveAndRender();
             }
 
-            // EXPORT FUNCTION (Share Sheet)
-            window.exportToReminders = function() {
-                let exportText = "✨ THE ROTA ✨\n";
-                
-                days.forEach(day => {
-                    if (choreData[day].length > 0) {
-                        exportText += `\n${day.toUpperCase()}:\n`;
-                        choreData[day].forEach(chore => {
-                            const status = chore.done ? "[x]" : "[ ]";
-                            exportText += `${status} ${chore.person.toUpperCase()}: ${chore.text}\n`;
-                        });
-                    }
-                });
-
-                if (navigator.share) {
-                    navigator.share({
-                        title: 'Squad Chores',
-                        text: exportText
-                    }).catch(console.error);
-                } else {
-                    // Fallback for desktop/non-supported browsers
-                    alert("Copy this to Reminders:\n\n" + exportText);
-                }
-            }
-
             function saveAndRender() {
                 try {
                     localStorage.setItem('squadChores', JSON.stringify(choreData));
@@ -547,11 +556,20 @@
             }
 
             window.snapSchedule = function() {
+                // Hide tools for pic
                 document.querySelector('.command-center').style.display = 'none';
+                document.querySelector('.header-tools').style.display = 'none';
                 document.querySelectorAll('.inline-add-row').forEach(el => el.style.display = 'none');
-                html2canvas(document.body, { backgroundColor: "#f8f9fa", scale: 2 }).then(canvas => {
+                
+                // Capture ONLY the container with content
+                const captureElement = document.getElementById('capture-container');
+
+                html2canvas(captureElement, { backgroundColor: "#f8f9fa", scale: 2 }).then(canvas => {
+                    // Restore tools
                     document.querySelector('.command-center').style.display = 'flex';
+                    document.querySelector('.header-tools').style.display = 'flex';
                     window.render(); 
+                    
                     const imgData = canvas.toDataURL("image/png");
                     document.getElementById('snapResult').src = imgData;
                     document.getElementById('snapModal').style.display = 'flex';
