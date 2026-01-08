@@ -1,1 +1,573 @@
-# n682577khc-commits.github.io
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Squad Chores ✨</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --input-bg: #f1f3f5;
+            
+            /* The Squad Colors */
+            --stevie: #ff6b6b; 
+            --lucy: #e056fd;  
+            --noah: #00cec9;  
+            --daisy: #f9ca24; 
+            --ella: #4834d4;  
+        }
+
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            padding-top: max(20px, env(safe-area-inset-top));
+            padding-bottom: 400px;
+            -webkit-font-smoothing: antialiased;
+            overscroll-behavior-y: none; 
+        }
+
+        /* --- HEADER --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        /* BRAT STYLE TITLE */
+        h1 { 
+            font-family: "Arial Narrow", "Helvetica Condensed", sans-serif;
+            font-weight: 700; 
+            color: #000000;
+            margin: 0; 
+            font-size: 3.5rem; 
+            letter-spacing: -3px; 
+            transform: scaleY(1.1); 
+            filter: blur(0.8px);
+        }
+
+        .header-tools { display: flex; gap: 8px; }
+
+        .tool-btn {
+            position: relative;
+            background: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px; height: 44px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .tool-btn:hover { transform: scale(1.15) rotate(5deg); background: #fff; }
+        
+        .tool-btn::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            top: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s, top 0.2s;
+            z-index: 200;
+        }
+        .tool-btn:hover::after { opacity: 1; top: 110%; }
+
+        /* --- GRID LAYOUT --- */
+        .schedule {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: 1fr;
+        }
+
+        .day-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .day-card:hover { transform: translateY(-5px); }
+
+        .day-title {
+            font-size: 0.9rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+            color: #bbb;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex; justify-content: space-between;
+        }
+
+        .chore-list { display: flex; flex-direction: column; gap: 10px; }
+
+        .chore-item {
+            padding: 12px 16px;
+            border-radius: 16px;
+            background: #fff;
+            border: 1px solid rgba(0,0,0,0.03);
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 6px solid transparent;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.2s;
+        }
+
+        .chore-item:hover { transform: scale(1.02); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+
+        .chore-left { display: flex; align-items: center; gap: 12px; flex-grow: 1; }
+        
+        .chore-checkbox {
+            width: 22px; height: 22px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: transform 0.2s;
+        }
+        .chore-checkbox:active { transform: scale(1.3); }
+
+        .chore-item.done { opacity: 0.6; background: #fcfcfc; box-shadow: none; transform: scale(0.98); filter: grayscale(0.8); }
+        .chore-item.done span { text-decoration: line-through; color: #999; }
+
+        .empty-state {
+            color: #ddd; font-size: 0.85rem; font-style: italic; padding: 10px 0; font-weight: 600;
+        }
+
+        /* --- INLINE ADD UI --- */
+        .inline-add-row {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .inline-add-row:hover, .inline-add-row.active { opacity: 1; }
+
+        .new-btn-ghost {
+            background: #f0f2f4; border: none; color: #888;
+            font-size: 0.95rem; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; gap: 8px;
+            width: 100%; text-align: left; padding: 10px 15px;
+            border-radius: 14px;
+            transition: transform 0.2s;
+        }
+        .new-btn-ghost:hover { color: #555; background: #e9ecef; transform: scale(1.02); }
+
+        .inline-input-container {
+            display: none;
+            width: 100%;
+            gap: 8px;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            align-items: center;
+        }
+        
+        .mini-select {
+            padding: 10px; border-radius: 12px; border: none;
+            font-size: 0.9rem; background: #f1f3f5; font-weight: 700;
+            color: #555; cursor: pointer; outline: none; transition: transform 0.2s;
+        }
+
+        .mini-input {
+            flex-grow: 1; padding: 10px 14px; border-radius: 12px;
+            border: 2px solid transparent; font-size: 16px; 
+            outline: none; background: #f1f3f5; transition: all 0.2s;
+        }
+        .mini-input:focus { background: white; border-color: #ddd; transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+
+        .inline-cancel-btn {
+            background: #ffe5e5; color: #ff6b6b; border: none;
+            width: 30px; height: 30px; border-radius: 50%;
+            font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Person Colors */
+        .person-stevie { border-left-color: var(--stevie); color: #c0392b; background: #fff5f5; }
+        .person-lucy { border-left-color: var(--lucy); color: #be2edd; background: #fdf0fd; }
+        .person-noah { border-left-color: var(--noah); color: #00a8ff; background: #eafdff; }
+        .person-daisy { border-left-color: var(--daisy); color: #f39c12; background: #fffcf0; }
+        .person-ella { border-left-color: var(--ella); color: #4834d4; background: #f0f0ff; }
+
+        .delete-btn {
+            background: transparent; border: none; color: #ddd;
+            font-size: 20px; padding: 0 0 0 10px; cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .delete-btn:hover { color: #ff6b6b; transform: scale(1.2) rotate(90deg); }
+
+        /* --- BOTTOM COMMAND CENTER --- */
+        .command-center {
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            width: 100%;
+            background: rgba(255,255,255,0.98); 
+            backdrop-filter: blur(20px);
+            padding: 20px; 
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            border-top: 1px solid rgba(0,0,0,0.05);
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.1); 
+            z-index: 100;
+            border-radius: 30px 30px 0 0;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .command-center.collapsed {
+            transform: translateY(calc(100% - 30px)); 
+        }
+
+        .collapse-handle-area {
+            width: 100%; height: 20px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; margin-top: -10px; padding-bottom: 5px;
+        }
+
+        .collapse-pill { width: 40px; height: 5px; background: #e0e0e0; border-radius: 10px; }
+        
+        .global-input-style {
+            padding: 16px; border-radius: 18px; border: 2px solid transparent;
+            font-size: 16px; background: var(--input-bg); color: #333;
+            outline: none; width: 100%; transition: all 0.2s;
+        }
+        .global-input-style:focus { background: white; border-color: #ddd; transform: scale(1.02); box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+
+        .selector-scroll {
+            display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px;
+            scrollbar-width: none;
+        }
+        .selector-scroll::-webkit-scrollbar { display: none; }
+
+        .pill {
+            padding: 10px 20px; background: #eee; border-radius: 24px;
+            font-size: 0.95rem; font-weight: 700; color: #777;
+            white-space: nowrap; cursor: pointer; border: 2px solid transparent;
+            user-select: none; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .pill:hover { transform: scale(1.05); }
+        .pill:active { transform: scale(0.95); }
+        
+        .pill.active[data-person="stevie"] { background: var(--stevie); color: white; box-shadow: 0 4px 10px rgba(255, 107, 107, 0.4); }
+        .pill.active[data-person="lucy"] { background: var(--lucy); color: white; box-shadow: 0 4px 10px rgba(243, 104, 224, 0.4); }
+        .pill.active[data-person="noah"] { background: var(--noah); color: white; box-shadow: 0 4px 10px rgba(0, 210, 211, 0.4); }
+        .pill.active[data-person="daisy"] { background: var(--daisy); color: white; box-shadow: 0 4px 10px rgba(254, 202, 87, 0.4); }
+        .pill.active[data-person="ella"] { background: var(--ella); color: white; box-shadow: 0 4px 10px rgba(84, 160, 255, 0.4); }
+
+        .day-pill { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; padding: 0; flex-shrink: 0; }
+        .day-pill.active { background: #333; color: white; transform: scale(1.15); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+        .add-btn {
+            background: #333; color: white; font-weight: 800; border: none;
+            width: 100%; padding: 16px; border-radius: 18px; font-size: 1.1rem;
+            cursor: pointer; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .add-btn:active { transform: scale(0.9); }
+
+        #snapModal { 
+            display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 1000; flex-direction: column; 
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        #snapModal img { max-width: 100%; max-height: 80%; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        #snapModal p { color: white; margin-top: 20px; font-weight: 600; letter-spacing: 0.5px;}
+        .close-modal { position: absolute; top: 30px; right: 30px; color: white; font-size: 2.5rem; background: none; border: none; cursor: pointer; transition: transform 0.2s; }
+        .close-modal:hover { transform: rotate(90deg) scale(1.2); }
+
+        @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        @media (min-width: 768px) { .schedule { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>the rota</h1>
+        <div class="header-tools">
+            <button class="tool-btn" onclick="exportToReminders()" data-tooltip="Export 🍏">🍏</button>
+            <button class="tool-btn" onclick="weeklyReset()" data-tooltip="Weekly Reset ✨">🔄</button>
+            <button class="tool-btn" onclick="chaosMode()" data-tooltip="Shuffle 🎲">🎲</button>
+            <button class="tool-btn" onclick="snapSchedule()" data-tooltip="Snap Pic 📸">📸</button>
+        </div>
+    </header>
+
+    <div class="schedule" id="scheduleGrid"></div>
+
+    <div id="snapModal">
+        <button class="close-modal" onclick="closeSnap()">×</button>
+        <img id="snapResult" src="" />
+        <p>Long press to save, bestie ✨</p>
+    </div>
+
+    <div class="command-center" id="commandCenter">
+        <div class="collapse-handle-area" onclick="toggleCollapse()">
+            <div class="collapse-pill"></div>
+        </div>
+
+        <div class="selector-scroll" id="personSelector">
+            <div class="pill active" data-person="stevie" onclick="selectPerson('stevie')">Stevie</div>
+            <div class="pill" data-person="lucy" onclick="selectPerson('lucy')">Lucy</div>
+            <div class="pill" data-person="noah" onclick="selectPerson('noah')">Noah</div>
+            <div class="pill" data-person="daisy" onclick="selectPerson('daisy')">Daisy</div>
+            <div class="pill" data-person="ella" onclick="selectPerson('ella')">Ella</div>
+        </div>
+        <div class="selector-scroll" id="daySelector">
+            <div class="pill day-pill active" data-day="Monday" onclick="selectDay('Monday')">M</div>
+            <div class="pill day-pill" data-day="Tuesday" onclick="selectDay('Tuesday')">T</div>
+            <div class="pill day-pill" data-day="Wednesday" onclick="selectDay('Wednesday')">W</div>
+            <div class="pill day-pill" data-day="Thursday" onclick="selectDay('Thursday')">T</div>
+            <div class="pill day-pill" data-day="Friday" onclick="selectDay('Friday')">F</div>
+            <div class="pill day-pill" data-day="Saturday" onclick="selectDay('Saturday')">S</div>
+            <div class="pill day-pill" data-day="Sunday" onclick="selectDay('Sunday')">S</div>
+        </div>
+        
+        <input type="text" id="choreInput" class="global-input-style" placeholder="Add a chore manually...">
+        
+        <button class="add-btn" onclick="handleAdd()">Add Chore</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+            const squad = ["stevie", "lucy", "noah", "daisy", "ella"];
+            const sassyEmpty = ["Go touch grass.", "Empty like my bank account.", "Zero vibes detected.", "Living rent free."];
+
+            let choreData = {};
+            try {
+                const stored = localStorage.getItem('squadChores');
+                if (stored) choreData = JSON.parse(stored);
+            } catch (e) {
+                console.error("Save file corrupted, resetting.", e);
+                choreData = {};
+            }
+
+            days.forEach(day => {
+                if (!choreData[day] || !Array.isArray(choreData[day])) {
+                    choreData[day] = [];
+                }
+            });
+
+            let currentPerson = 'stevie';
+            let currentDay = 'Monday';
+
+            function getSassyText() {
+                return sassyEmpty[Math.floor(Math.random() * sassyEmpty.length)];
+            }
+
+            window.render = function() {
+                const grid = document.getElementById('scheduleGrid');
+                if(!grid) return; 
+                grid.innerHTML = '';
+
+                days.forEach(day => {
+                    const dayCard = document.createElement('div');
+                    dayCard.className = 'day-card';
+                    
+                    let choresHtml = '';
+                    if (choreData[day].length > 0) {
+                        choresHtml = choreData[day].map((chore, index) => {
+                            const isDone = chore.done ? 'done' : '';
+                            const isChecked = chore.done ? 'checked' : '';
+                            return `
+                            <div class="chore-item person-${chore.person} ${isDone}">
+                                <div class="chore-left" onclick="toggleDone('${day}', ${index})">
+                                    <input type="checkbox" class="chore-checkbox" ${isChecked} style="accent-color: var(--${chore.person})">
+                                    <span><strong>${chore.person.charAt(0).toUpperCase() + chore.person.slice(1)}:</strong> ${chore.text}</span>
+                                </div>
+                                <button class="delete-btn" onclick="deleteChore('${day}', ${index})">×</button>
+                            </div>
+                        `;
+                        }).join('');
+                    } else {
+                        choresHtml = `<div class="empty-state">${getSassyText()}</div>`;
+                    }
+
+                    const inlineInputHtml = `
+                        <div class="inline-add-row" id="inlineRow-${day}">
+                            <button class="new-btn-ghost" onclick="showInlineInput('${day}')" id="btn-${day}">+ New</button>
+                            <div class="inline-input-container" id="inputContainer-${day}">
+                                <select class="mini-select" id="select-${day}">
+                                    <option value="stevie">Stevie</option>
+                                    <option value="lucy">Lucy</option>
+                                    <option value="noah">Noah</option>
+                                    <option value="daisy">Daisy</option>
+                                    <option value="ella">Ella</option>
+                                </select>
+                                <input type="text" class="mini-input" id="input-${day}" placeholder="Type & Enter..." onkeydown="handleInlineKey(event, '${day}')">
+                                <button class="inline-cancel-btn" onclick="hideInlineInput('${day}')">×</button>
+                            </div>
+                        </div>
+                    `;
+
+                    dayCard.innerHTML = `
+                        <div class="day-title">${day} <span>${choreData[day].length}</span></div>
+                        <div class="chore-list">${choresHtml}</div>
+                        ${inlineInputHtml}
+                    `;
+                    grid.appendChild(dayCard);
+                });
+            }
+
+            window.showInlineInput = function(day) {
+                document.getElementById(`btn-${day}`).style.display = 'none';
+                document.getElementById(`inputContainer-${day}`).style.display = 'flex';
+                document.getElementById(`input-${day}`).focus();
+            }
+
+            window.hideInlineInput = function(day) {
+                document.getElementById(`btn-${day}`).style.display = 'flex';
+                document.getElementById(`inputContainer-${day}`).style.display = 'none';
+            }
+
+            window.handleInlineKey = function(event, day) {
+                if (event.key === 'Enter') {
+                    const text = document.getElementById(`input-${day}`).value;
+                    const person = document.getElementById(`select-${day}`).value;
+                    if (!text.trim()) return; 
+                    choreData[day].push({ person: person, text: text, done: false });
+                    saveAndRender();
+                    setTimeout(() => {
+                        window.showInlineInput(day);
+                        document.getElementById(`select-${day}`).value = person;
+                    }, 10);
+                }
+            }
+
+            window.toggleDone = function(day, index) {
+                choreData[day][index].done = !choreData[day][index].done;
+                saveAndRender();
+            }
+
+            window.selectPerson = function(name) {
+                currentPerson = name;
+                document.querySelectorAll('#personSelector .pill').forEach(el => el.classList.remove('active'));
+                document.querySelector(`#personSelector .pill[data-person="${name}"]`).classList.add('active');
+            }
+
+            window.selectDay = function(day) {
+                currentDay = day;
+                document.querySelectorAll('#daySelector .pill').forEach(el => el.classList.remove('active'));
+                document.querySelector(`#daySelector .pill[data-day="${day}"]`).classList.add('active');
+            }
+
+            window.handleAdd = function() {
+                const text = document.getElementById('choreInput').value;
+                if (!text) return alert("Type something.");
+                choreData[currentDay].push({ person: currentPerson, text: text, done: false });
+                document.getElementById('choreInput').value = '';
+                saveAndRender();
+            }
+
+            window.weeklyReset = function() {
+                if(!confirm("Reset? (Bins Sat, Clean/Vac Random)")) return;
+                const weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+                const randomBinPerson = squad[Math.floor(Math.random() * squad.length)];
+                choreData['Saturday'].push({ person: randomBinPerson, text: "Empty Bins 🗑️", done: false });
+                const cleanDay = weekdays[Math.floor(Math.random() * weekdays.length)];
+                const cleanPerson = squad[Math.floor(Math.random() * squad.length)];
+                choreData[cleanDay].push({ person: cleanPerson, text: "Clean House 🧽", done: false });
+                const vacDay = weekdays[Math.floor(Math.random() * weekdays.length)];
+                const vacPerson = squad[Math.floor(Math.random() * squad.length)];
+                choreData[vacDay].push({ person: vacPerson, text: "Vacuum 🧹", done: false });
+                saveAndRender();
+            }
+
+            window.chaosMode = function() {
+                if (!confirm("Randomize everyone's chores?")) return;
+                days.forEach(day => {
+                    choreData[day].forEach(chore => {
+                        chore.person = squad[Math.floor(Math.random() * squad.length)];
+                    });
+                });
+                saveAndRender();
+            }
+
+            window.deleteChore = function(day, index) {
+                choreData[day].splice(index, 1);
+                saveAndRender();
+            }
+
+            // EXPORT FUNCTION (Share Sheet)
+            window.exportToReminders = function() {
+                let exportText = "✨ THE ROTA ✨\n";
+                
+                days.forEach(day => {
+                    if (choreData[day].length > 0) {
+                        exportText += `\n${day.toUpperCase()}:\n`;
+                        choreData[day].forEach(chore => {
+                            const status = chore.done ? "[x]" : "[ ]";
+                            exportText += `${status} ${chore.person.toUpperCase()}: ${chore.text}\n`;
+                        });
+                    }
+                });
+
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'Squad Chores',
+                        text: exportText
+                    }).catch(console.error);
+                } else {
+                    // Fallback for desktop/non-supported browsers
+                    alert("Copy this to Reminders:\n\n" + exportText);
+                }
+            }
+
+            function saveAndRender() {
+                try {
+                    localStorage.setItem('squadChores', JSON.stringify(choreData));
+                } catch(e) {
+                    alert("Storage full! Delete some chores.");
+                }
+                window.render();
+            }
+
+            window.snapSchedule = function() {
+                document.querySelector('.command-center').style.display = 'none';
+                document.querySelectorAll('.inline-add-row').forEach(el => el.style.display = 'none');
+                html2canvas(document.body, { backgroundColor: "#f8f9fa", scale: 2 }).then(canvas => {
+                    document.querySelector('.command-center').style.display = 'flex';
+                    window.render(); 
+                    const imgData = canvas.toDataURL("image/png");
+                    document.getElementById('snapResult').src = imgData;
+                    document.getElementById('snapModal').style.display = 'flex';
+                });
+            }
+
+            window.closeSnap = function() { document.getElementById('snapModal').style.display = 'none'; }
+            
+            window.toggleCollapse = function() {
+                const center = document.getElementById('commandCenter');
+                center.classList.toggle('collapsed');
+            }
+
+            // Initial Render
+            window.render();
+        });
+    </script>
+</body>
+</html>
