@@ -10,10 +10,15 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root {
+            /* Light Theme (Default) */
             --bg-color: #f8f9fa;
             --card-bg: #ffffff;
             --text-color: #333333;
             --input-bg: #f1f3f5;
+            --title-color: #000000;
+            --modal-bg: rgba(255,255,255,0.95);
+            --pill-bg: #eee;
+            --pill-text: #777;
             
             /* The Squad Colors */
             --stevie: #ff6b6b; 
@@ -23,24 +28,33 @@
             --ella: #4834d4;  
         }
 
+        /* Dark Mode Overrides */
+        body.dark-mode {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --input-bg: #2c2c2c;
+            --title-color: #8ace00; /* Brat Green */
+            --modal-bg: rgba(30,30,30,0.95);
+            --pill-bg: #333;
+            --pill-text: #aaa;
+        }
+
         * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
         
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            /* Padding on body for scrolling, but we won't snap this anymore */
+            padding: 20px;
             padding-top: max(20px, env(safe-area-inset-top));
             padding-bottom: 400px;
             -webkit-font-smoothing: antialiased;
-            overscroll-behavior-y: none; 
+            overscroll-behavior-y: none;
+            transition: background-color 0.3s, color 0.3s;
         }
 
-        /* Container for snapping cleaner pics */
-        #capture-container {
-            padding: 20px;
-            background-color: var(--bg-color); /* Ensure bg color in snap */
-        }
+        #capture-container { padding: 10px; background-color: var(--bg-color); border-radius: 20px; }
 
         /* --- HEADER --- */
         header {
@@ -53,261 +67,189 @@
         h1 { 
             font-family: "Arial Narrow", "Helvetica Condensed", sans-serif;
             font-weight: 700; 
-            color: #000000;
+            color: var(--title-color);
             margin: 0; 
             font-size: 3.5rem; 
             letter-spacing: -3px; 
             transform: scaleY(1.1); 
             filter: blur(0.8px);
+            transition: color 0.3s;
         }
 
         .header-tools { display: flex; gap: 8px; }
 
         .tool-btn {
             position: relative;
-            background: white;
+            background: var(--card-bg);
             border: none;
             border-radius: 50%;
             width: 44px; height: 44px;
             font-size: 1.2rem;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
             display: flex; align-items: center; justify-content: center;
         }
-        .tool-btn:hover { transform: scale(1.15) rotate(5deg); background: #fff; }
+        .tool-btn:hover { transform: scale(1.15) rotate(5deg); }
         
+        /* Tooltips */
         .tool-btn::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            top: 120%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #333;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s, top 0.2s;
-            z-index: 200;
+            content: attr(data-tooltip); position: absolute; top: 120%; left: 50%; transform: translateX(-50%);
+            background: #333; color: white; padding: 6px 12px; border-radius: 12px;
+            font-size: 0.75rem; font-weight: bold; white-space: nowrap; opacity: 0; pointer-events: none;
+            transition: opacity 0.2s, top 0.2s; z-index: 200;
         }
         .tool-btn:hover::after { opacity: 1; top: 110%; }
 
-        /* --- GRID LAYOUT --- */
+        /* --- VIEWS --- */
         .schedule {
             display: grid;
             gap: 20px;
-            grid-template-columns: 1fr;
+            transition: all 0.3s ease;
         }
 
+        /* View: List (Default) - 1 col mobile, 2 col desktop */
+        .schedule.view-list { grid-template-columns: 1fr; }
+        
+        /* View: Board (Grid) - 2 col mobile */
+        .schedule.view-board { grid-template-columns: 1fr 1fr; }
+
+        /* View: Monthly (Calendar) - Tiny squares */
+        .schedule.view-monthly { 
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); 
+            gap: 10px;
+        }
+        .schedule.view-monthly .day-card { min-height: 150px; padding: 10px; }
+        .schedule.view-monthly .chore-item { padding: 5px; font-size: 0.8rem; }
+        .schedule.view-monthly .inline-add-row { display: none; } /* Hide add in month view to save space */
+
+        /* --- CARDS --- */
         .day-card {
             background: var(--card-bg);
             padding: 20px;
             border-radius: 24px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.03);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            display: flex;
-            flex-direction: column;
+            transition: transform 0.3s;
+            display: flex; flex-direction: column;
         }
-        
         .day-card:hover { transform: translateY(-5px); }
 
         .day-title {
-            font-size: 0.9rem;
-            font-weight: 800;
-            margin-bottom: 15px;
-            color: #bbb;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+            font-size: 0.9rem; font-weight: 800; margin-bottom: 15px;
+            color: #888; text-transform: uppercase; letter-spacing: 1px;
             display: flex; justify-content: space-between;
         }
 
         .chore-list { display: flex; flex-direction: column; gap: 10px; }
 
         .chore-item {
-            padding: 12px 16px;
-            border-radius: 16px;
-            background: #fff;
-            border: 1px solid rgba(0,0,0,0.03);
-            font-weight: 600;
-            font-size: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 6px solid transparent;
-            cursor: pointer;
+            padding: 12px 16px; border-radius: 16px; background: var(--card-bg);
+            border: 1px solid rgba(0,0,0,0.05); font-weight: 600; font-size: 1rem;
+            display: flex; justify-content: space-between; align-items: center;
+            border-left: 6px solid transparent; cursor: pointer;
             box-shadow: 0 4px 10px rgba(0,0,0,0.02);
             animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             transition: all 0.2s;
+            color: var(--text-color);
         }
-
-        .chore-item:hover { transform: scale(1.02); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+        .chore-item:hover { transform: scale(1.02); }
 
         .chore-left { display: flex; align-items: center; gap: 12px; flex-grow: 1; }
         
         .chore-checkbox {
-            width: 22px; height: 22px;
-            cursor: pointer;
-            border-radius: 8px;
+            width: 22px; height: 22px; cursor: pointer; border-radius: 8px;
             transition: transform 0.2s;
         }
         .chore-checkbox:active { transform: scale(1.3); }
 
-        .chore-item.done { opacity: 0.6; background: #fcfcfc; box-shadow: none; transform: scale(0.98); filter: grayscale(0.8); }
-        .chore-item.done span { text-decoration: line-through; color: #999; }
+        .chore-item.done { opacity: 0.5; box-shadow: none; transform: scale(0.98); filter: grayscale(0.8); }
+        .chore-item.done span { text-decoration: line-through; }
 
         .empty-state {
-            color: #ddd; font-size: 0.85rem; font-style: italic; padding: 10px 0; font-weight: 600;
+            color: #888; font-size: 0.85rem; font-style: italic; padding: 10px 0; font-weight: 600;
         }
+
+        /* --- SETTINGS MODAL --- */
+        #settingsModal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+        .settings-card {
+            background: var(--card-bg); width: 90%; max-width: 350px;
+            padding: 25px; border-radius: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; gap: 20px;
+            animation: popIn 0.3s;
+        }
+        .settings-title { font-size: 1.5rem; font-weight: 800; text-align: center; margin: 0; }
+        
+        .setting-row { display: flex; justify-content: space-between; align-items: center; }
+        .setting-label { font-weight: 600; font-size: 1.1rem; }
+        
+        /* Toggle Switch */
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--noah); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        /* View Buttons */
+        .view-options { display: flex; gap: 5px; background: var(--input-bg); padding: 5px; border-radius: 16px; }
+        .view-btn { flex: 1; border: none; background: transparent; padding: 10px; border-radius: 12px; font-weight: 700; color: #888; cursor: pointer; }
+        .view-btn.active { background: var(--card-bg); color: var(--text-color); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
 
         /* --- INLINE ADD UI --- */
-        .inline-add-row {
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            opacity: 0.7;
-            transition: opacity 0.2s;
-        }
-        .inline-add-row:hover, .inline-add-row.active { opacity: 1; }
-
-        .new-btn-ghost {
-            background: #f0f2f4; border: none; color: #888;
-            font-size: 0.95rem; font-weight: 700; cursor: pointer;
-            display: flex; align-items: center; gap: 8px;
-            width: 100%; text-align: left; padding: 10px 15px;
-            border-radius: 14px;
-            transition: transform 0.2s;
-        }
-        .new-btn-ghost:hover { color: #555; background: #e9ecef; transform: scale(1.02); }
-
-        .inline-input-container {
-            display: none;
-            width: 100%;
-            gap: 8px;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            align-items: center;
-        }
+        .inline-add-row { margin-top: 15px; display: flex; align-items: center; gap: 10px; opacity: 0.7; }
+        .new-btn-ghost { background: var(--input-bg); border: none; color: #888; font-weight: 700; width: 100%; text-align: left; padding: 10px 15px; border-radius: 14px; cursor: pointer;}
+        .inline-input-container { display: none; width: 100%; gap: 8px; animation: popIn 0.3s; align-items: center; }
         
-        .mini-select {
-            padding: 10px; border-radius: 12px; border: none;
-            font-size: 0.9rem; background: #f1f3f5; font-weight: 700;
-            color: #555; cursor: pointer; outline: none; transition: transform 0.2s;
-        }
-
-        .mini-input {
-            flex-grow: 1; padding: 10px 14px; border-radius: 12px;
-            border: 2px solid transparent; font-size: 16px; 
-            outline: none; background: #f1f3f5; transition: all 0.2s;
-        }
-        .mini-input:focus { background: white; border-color: #ddd; transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-
-        .inline-cancel-btn {
-            background: #ffe5e5; color: #ff6b6b; border: none;
-            width: 30px; height: 30px; border-radius: 50%;
-            font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
-        }
+        .mini-select { padding: 10px; border-radius: 12px; border: none; background: var(--input-bg); font-weight: 700; color: #555; }
+        .mini-input { flex-grow: 1; padding: 10px 14px; border-radius: 12px; border: 2px solid transparent; font-size: 16px; background: var(--input-bg); color: var(--text-color); outline: none; }
+        .inline-cancel-btn { background: #ffe5e5; color: #ff6b6b; border: none; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
 
         /* Person Colors */
-        .person-stevie { border-left-color: var(--stevie); color: #c0392b; background: #fff5f5; }
-        .person-lucy { border-left-color: var(--lucy); color: #be2edd; background: #fdf0fd; }
-        .person-noah { border-left-color: var(--noah); color: #00a8ff; background: #eafdff; }
-        .person-daisy { border-left-color: var(--daisy); color: #f39c12; background: #fffcf0; }
-        .person-ella { border-left-color: var(--ella); color: #4834d4; background: #f0f0ff; }
+        .person-stevie { border-left-color: var(--stevie); color: var(--stevie); background: rgba(255,107,107,0.1); }
+        .person-lucy { border-left-color: var(--lucy); color: var(--lucy); background: rgba(224,86,253,0.1); }
+        .person-noah { border-left-color: var(--noah); color: var(--noah); background: rgba(0,206,201,0.1); }
+        .person-daisy { border-left-color: var(--daisy); color: var(--daisy); background: rgba(249,202,36,0.1); }
+        .person-ella { border-left-color: var(--ella); color: var(--ella); background: rgba(72,52,212,0.1); }
 
-        .delete-btn {
-            background: transparent; border: none; color: #ddd;
-            font-size: 20px; padding: 0 0 0 10px; cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .delete-btn:hover { color: #ff6b6b; transform: scale(1.2) rotate(90deg); }
+        .delete-btn { background: transparent; border: none; color: #888; font-size: 20px; cursor: pointer; }
 
         /* --- BOTTOM COMMAND CENTER --- */
         .command-center {
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
-            width: 100%;
-            background: rgba(255,255,255,0.98); 
-            backdrop-filter: blur(20px);
-            padding: 20px; 
-            padding-bottom: max(20px, env(safe-area-inset-bottom));
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: var(--modal-bg); backdrop-filter: blur(20px);
+            padding: 20px; padding-bottom: max(20px, env(safe-area-inset-bottom));
             border-top: 1px solid rgba(0,0,0,0.05);
-            display: flex; 
-            flex-direction: column; 
-            gap: 15px;
-            box-shadow: 0 -10px 40px rgba(0,0,0,0.1); 
-            z-index: 100;
-            border-radius: 30px 30px 0 0;
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex; flex-direction: column; gap: 15px;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.1); z-index: 100;
+            border-radius: 30px 30px 0 0; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-
-        .command-center.collapsed {
-            transform: translateY(calc(100% - 30px)); 
-        }
-
-        .collapse-handle-area {
-            width: 100%; height: 20px; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; margin-top: -10px; padding-bottom: 5px;
-        }
-
-        .collapse-pill { width: 40px; height: 5px; background: #e0e0e0; border-radius: 10px; }
+        .command-center.collapsed { transform: translateY(calc(100% - 30px)); }
+        .collapse-handle-area { width: 100%; height: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; margin-top: -10px; }
+        .collapse-pill { width: 40px; height: 5px; background: #bbb; border-radius: 10px; }
         
-        .global-input-style {
-            padding: 16px; border-radius: 18px; border: 2px solid transparent;
-            font-size: 16px; background: var(--input-bg); color: #333;
-            outline: none; width: 100%; transition: all 0.2s;
-        }
-        .global-input-style:focus { background: white; border-color: #ddd; transform: scale(1.02); box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
-
-        .selector-scroll {
-            display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px;
-            scrollbar-width: none;
-        }
-        .selector-scroll::-webkit-scrollbar { display: none; }
-
-        .pill {
-            padding: 10px 20px; background: #eee; border-radius: 24px;
-            font-size: 0.95rem; font-weight: 700; color: #777;
-            white-space: nowrap; cursor: pointer; border: 2px solid transparent;
-            user-select: none; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .pill:hover { transform: scale(1.05); }
-        .pill:active { transform: scale(0.95); }
-        
-        .pill.active[data-person="stevie"] { background: var(--stevie); color: white; box-shadow: 0 4px 10px rgba(255, 107, 107, 0.4); }
-        .pill.active[data-person="lucy"] { background: var(--lucy); color: white; box-shadow: 0 4px 10px rgba(243, 104, 224, 0.4); }
-        .pill.active[data-person="noah"] { background: var(--noah); color: white; box-shadow: 0 4px 10px rgba(0, 210, 211, 0.4); }
-        .pill.active[data-person="daisy"] { background: var(--daisy); color: white; box-shadow: 0 4px 10px rgba(254, 202, 87, 0.4); }
-        .pill.active[data-person="ella"] { background: var(--ella); color: white; box-shadow: 0 4px 10px rgba(84, 160, 255, 0.4); }
-
+        .global-input-style { padding: 16px; border-radius: 18px; border: 2px solid transparent; font-size: 16px; background: var(--input-bg); color: var(--text-color); outline: none; width: 100%; }
+        .selector-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; }
+        .pill { padding: 10px 20px; background: var(--pill-bg); border-radius: 24px; font-weight: 700; color: var(--pill-text); white-space: nowrap; cursor: pointer; }
+        .pill.active[data-person="stevie"] { background: var(--stevie); color: white; }
+        .pill.active[data-person="lucy"] { background: var(--lucy); color: white; }
+        .pill.active[data-person="noah"] { background: var(--noah); color: white; }
+        .pill.active[data-person="daisy"] { background: var(--daisy); color: white; }
+        .pill.active[data-person="ella"] { background: var(--ella); color: white; }
         .day-pill { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; padding: 0; flex-shrink: 0; }
-        .day-pill.active { background: #333; color: white; transform: scale(1.15); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .day-pill.active { background: var(--text-color); color: var(--card-bg); transform: scale(1.15); }
 
-        .add-btn {
-            background: #333; color: white; font-weight: 800; border: none;
-            width: 100%; padding: 16px; border-radius: 18px; font-size: 1.1rem;
-            cursor: pointer; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        .add-btn:active { transform: scale(0.9); }
+        .add-btn { background: var(--text-color); color: var(--card-bg); font-weight: 800; border: none; width: 100%; padding: 16px; border-radius: 18px; font-size: 1.1rem; cursor: pointer; }
 
-        #snapModal { 
-            display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 1000; flex-direction: column; 
-            align-items: center; justify-content: center; padding: 20px;
-        }
+        #snapModal { display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         #snapModal img { max-width: 100%; max-height: 80%; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-        #snapModal p { color: white; margin-top: 20px; font-weight: 600; letter-spacing: 0.5px;}
-        .close-modal { position: absolute; top: 30px; right: 30px; color: white; font-size: 2.5rem; background: none; border: none; cursor: pointer; transition: transform 0.2s; }
-        .close-modal:hover { transform: rotate(90deg) scale(1.2); }
+        .close-modal { position: absolute; top: 30px; right: 30px; color: white; font-size: 2.5rem; background: none; border: none; cursor: pointer; }
 
         @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        
-        @media (min-width: 768px) { .schedule { grid-template-columns: repeat(2, 1fr); } }
+        @media (min-width: 768px) { .schedule.view-list { grid-template-columns: repeat(2, 1fr); } }
     </style>
 </head>
 <body>
@@ -316,19 +258,48 @@
         <header>
             <h1>the rota</h1>
             <div class="header-tools">
-                <button class="tool-btn" onclick="weeklyReset()" data-tooltip="Weekly Reset ✨">🔄</button>
-                <button class="tool-btn" onclick="chaosMode()" data-tooltip="Shuffle 🎲">🎲</button>
+                <button class="tool-btn" onclick="openSettings()" data-tooltip="Settings ⚙️">⚙️</button>
                 <button class="tool-btn" onclick="snapSchedule()" data-tooltip="Snap Pic 📸">📸</button>
             </div>
         </header>
 
-        <div class="schedule" id="scheduleGrid"></div>
+        <div class="schedule view-list" id="scheduleGrid"></div>
+    </div>
+
+    <div id="settingsModal" onclick="if(event.target === this) closeSettings()">
+        <div class="settings-card">
+            <div class="settings-title">Settings ⚙️</div>
+            
+            <div class="setting-row">
+                <span class="setting-label">Dark Mode</span>
+                <label class="switch">
+                    <input type="checkbox" id="darkModeToggle" onchange="toggleDarkMode()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="setting-row" style="flex-direction:column; align-items:flex-start; gap:10px;">
+                <span class="setting-label">View Layout</span>
+                <div class="view-options" style="width:100%">
+                    <button class="view-btn active" onclick="setView('view-list')" id="btn-view-list">List</button>
+                    <button class="view-btn" onclick="setView('view-board')" id="btn-view-board">Board</button>
+                    <button class="view-btn" onclick="setView('view-monthly')" id="btn-view-monthly">Month</button>
+                </div>
+            </div>
+
+            <hr style="width:100%; border:0; border-top:1px solid #eee;">
+            
+            <div class="setting-row" style="justify-content:center; gap:10px;">
+                 <button class="view-btn" onclick="weeklyReset()" style="background:#ffeaa7; color:#d35400;">Weekly Reset 🔄</button>
+                 <button class="view-btn" onclick="chaosMode()" style="background:#fab1a0; color:#d63031;">Chaos 🎲</button>
+            </div>
+        </div>
     </div>
 
     <div id="snapModal">
         <button class="close-modal" onclick="closeSnap()">×</button>
         <img id="snapResult" src="" />
-        <p>Long press to save, bestie ✨</p>
+        <p style="color:white; margin-top:20px;">Long press to save ✨</p>
     </div>
 
     <div class="command-center" id="commandCenter">
@@ -363,32 +334,31 @@
             const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
             const squad = ["stevie", "lucy", "noah", "daisy", "ella"];
             const sassyEmpty = ["Go touch grass.", "Empty like my bank account.", "Zero vibes detected.", "Living rent free."];
-            const colorMap = {
-                'stevie': '#ff6b6b', 'lucy': '#e056fd', 'noah': '#00cec9',
-                'daisy': '#f9ca24', 'ella': '#4834d4'
-            };
+            const colorMap = { 'stevie': '#ff6b6b', 'lucy': '#e056fd', 'noah': '#00cec9', 'daisy': '#f9ca24', 'ella': '#4834d4' };
 
+            // Load Data
             let choreData = {};
             try {
                 const stored = localStorage.getItem('squadChores');
                 if (stored) choreData = JSON.parse(stored);
-            } catch (e) {
-                console.error("Save file corrupted, resetting.", e);
-                choreData = {};
-            }
+            } catch (e) { choreData = {}; }
 
-            days.forEach(day => {
-                if (!choreData[day] || !Array.isArray(choreData[day])) {
-                    choreData[day] = [];
-                }
-            });
+            days.forEach(day => { if (!choreData[day] || !Array.isArray(choreData[day])) choreData[day] = []; });
+
+            // Load Settings
+            let currentView = localStorage.getItem('rotaView') || 'view-list';
+            let isDark = localStorage.getItem('rotaDark') === 'true';
+            
+            // Apply Initial Settings
+            document.getElementById('scheduleGrid').className = `schedule ${currentView}`;
+            if(isDark) document.body.classList.add('dark-mode');
+            document.getElementById('darkModeToggle').checked = isDark;
+            updateViewButtons();
 
             let currentPerson = 'stevie';
             let currentDay = 'Monday';
 
-            function getSassyText() {
-                return sassyEmpty[Math.floor(Math.random() * sassyEmpty.length)];
-            }
+            function getSassyText() { return sassyEmpty[Math.floor(Math.random() * sassyEmpty.length)]; }
 
             window.render = function() {
                 const grid = document.getElementById('scheduleGrid');
@@ -404,7 +374,6 @@
                         choresHtml = choreData[day].map((chore, index) => {
                             const isDone = chore.done ? 'done' : '';
                             const isChecked = chore.done ? 'checked' : '';
-                            // Pass event to toggleDone for particle origin
                             return `
                             <div class="chore-item person-${chore.person} ${isDone}">
                                 <div class="chore-left" onclick="toggleDone('${day}', ${index}, event)">
@@ -430,7 +399,7 @@
                                     <option value="daisy">Daisy</option>
                                     <option value="ella">Ella</option>
                                 </select>
-                                <input type="text" class="mini-input" id="input-${day}" placeholder="Type & Enter..." onkeydown="handleInlineKey(event, '${day}')">
+                                <input type="text" class="mini-input" id="input-${day}" placeholder="Type..." onkeydown="handleInlineKey(event, '${day}')">
                                 <button class="inline-cancel-btn" onclick="hideInlineInput('${day}')">×</button>
                             </div>
                         </div>
@@ -445,6 +414,30 @@
                 });
             }
 
+            // --- VIEW & SETTINGS LOGIC ---
+            window.openSettings = function() { document.getElementById('settingsModal').style.display = 'flex'; }
+            window.closeSettings = function() { document.getElementById('settingsModal').style.display = 'none'; }
+            
+            window.toggleDarkMode = function() {
+                isDark = !isDark;
+                document.body.classList.toggle('dark-mode', isDark);
+                localStorage.setItem('rotaDark', isDark);
+            }
+
+            window.setView = function(viewName) {
+                currentView = viewName;
+                document.getElementById('scheduleGrid').className = `schedule ${viewName}`;
+                localStorage.setItem('rotaView', viewName);
+                updateViewButtons();
+            }
+
+            function updateViewButtons() {
+                document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+                const activeBtn = document.getElementById(`btn-${currentView}`);
+                if(activeBtn) activeBtn.classList.add('active');
+            }
+
+            // --- STANDARD LOGIC ---
             window.showInlineInput = function(day) {
                 document.getElementById(`btn-${day}`).style.display = 'none';
                 document.getElementById(`inputContainer-${day}`).style.display = 'flex';
@@ -474,25 +467,12 @@
                 const newStatus = !choreData[day][index].done;
                 choreData[day][index].done = newStatus;
                 
-                // Trigger Confetti if marking done
                 if (newStatus === true && event) {
                     const person = choreData[day][index].person;
                     const color = colorMap[person] || '#ffffff';
-                    
-                    // Get click coordinates relative to viewport
                     const x = event.clientX / window.innerWidth;
                     const y = event.clientY / window.innerHeight;
-
-                    confetti({
-                        origin: { x: x, y: y },
-                        particleCount: 40,
-                        spread: 70,
-                        colors: [color, '#ffffff'],
-                        ticks: 200,
-                        gravity: 1.2,
-                        scalar: 0.8,
-                        disableForReducedMotion: true
-                    });
+                    confetti({ origin: { x, y }, particleCount: 40, spread: 70, colors: [color, '#ffffff'], ticks: 200, gravity: 1.2, scalar: 0.8, disableForReducedMotion: true });
                 }
                 saveAndRender();
             }
@@ -529,6 +509,7 @@
                 const vacPerson = squad[Math.floor(Math.random() * squad.length)];
                 choreData[vacDay].push({ person: vacPerson, text: "Vacuum 🧹", done: false });
                 saveAndRender();
+                closeSettings();
             }
 
             window.chaosMode = function() {
@@ -539,6 +520,7 @@
                     });
                 });
                 saveAndRender();
+                closeSettings();
             }
 
             window.deleteChore = function(day, index) {
@@ -547,29 +529,19 @@
             }
 
             function saveAndRender() {
-                try {
-                    localStorage.setItem('squadChores', JSON.stringify(choreData));
-                } catch(e) {
-                    alert("Storage full! Delete some chores.");
-                }
+                localStorage.setItem('squadChores', JSON.stringify(choreData));
                 window.render();
             }
 
             window.snapSchedule = function() {
-                // Hide tools for pic
                 document.querySelector('.command-center').style.display = 'none';
                 document.querySelector('.header-tools').style.display = 'none';
                 document.querySelectorAll('.inline-add-row').forEach(el => el.style.display = 'none');
                 
-                // Capture ONLY the container with content
-                const captureElement = document.getElementById('capture-container');
-
-                html2canvas(captureElement, { backgroundColor: "#f8f9fa", scale: 2 }).then(canvas => {
-                    // Restore tools
+                html2canvas(document.getElementById('capture-container'), { backgroundColor: isDark ? '#121212' : '#f8f9fa', scale: 2 }).then(canvas => {
                     document.querySelector('.command-center').style.display = 'flex';
                     document.querySelector('.header-tools').style.display = 'flex';
                     window.render(); 
-                    
                     const imgData = canvas.toDataURL("image/png");
                     document.getElementById('snapResult').src = imgData;
                     document.getElementById('snapModal').style.display = 'flex';
@@ -577,13 +549,8 @@
             }
 
             window.closeSnap = function() { document.getElementById('snapModal').style.display = 'none'; }
-            
-            window.toggleCollapse = function() {
-                const center = document.getElementById('commandCenter');
-                center.classList.toggle('collapsed');
-            }
+            window.toggleCollapse = function() { document.getElementById('commandCenter').classList.toggle('collapsed'); }
 
-            // Initial Render
             window.render();
         });
     </script>
